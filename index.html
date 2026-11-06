@@ -260,7 +260,7 @@
           <div class="field"><label for="aiProvider">Provedor</label><select id="aiProvider"><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google Gemini</option></select></div>
           <div class="field"><label for="aiModel">Modelo (com visão)</label><input id="aiModel" class="text-input" type="text" autocomplete="off" spellcheck="false"></div>
           <div class="field"><label for="aiKey">Chave de API</label><div class="key-row"><input id="aiKey" class="text-input" type="password" autocomplete="off" spellcheck="false" placeholder="Cole sua chave"><button id="keyToggle" class="btn" type="button">Mostrar</button></div><small id="keyStatus" class="field-help"></small><small id="keyHint" class="field-help"></small></div>
-          <div class="field"><label for="aiServerUrl">URL do servidor de interpretação <span style="color:var(--muted);font-weight:700">(opcional)</span></label><input id="aiServerUrl" class="text-input" type="url" autocomplete="off" spellcheck="false" value="https://treadmill-app.henriquecheib.workers.dev" placeholder="https://treadmill-app.henriquecheib.workers.dev"><small class="field-help">Com o servidor configurado a interpretação funciona para qualquer pessoa que abrir o app, sem chave própria.</small><small id="serverStatus" class="field-help"></small><small class="field-help">Se preenchido, o “Importar por imagem” envia a foto para essa URL e usa o treino que ela devolver — sem pedir chave de API. Se você apagar a URL e salvar, vale a chave acima, direto no provedor. Alterações na URL ficam salvas só neste aparelho.</small></div>
+          <div class="field"><label for="aiServerUrl">URL do servidor de interpretação <span style="color:var(--muted);font-weight:700">(opcional)</span></label><input id="aiServerUrl" class="text-input" type="url" autocomplete="off" spellcheck="false" value="https://treadmill-app.henriquecheib.workers.dev/interpretar" placeholder="https://treadmill-app.henriquecheib.workers.dev/interpretar"><small class="field-help">Com o servidor configurado a interpretação funciona para qualquer pessoa que abrir o app, sem chave própria.</small><small id="serverStatus" class="field-help"></small><small class="field-help">Se preenchido, o “Importar por imagem” envia a foto para essa URL e usa o treino que ela devolver — sem pedir chave de API. Se você apagar a URL e salvar, vale a chave acima, direto no provedor. Alterações na URL ficam salvas só neste aparelho.</small></div>
         </div>
         <p id="configMsg" class="json-error" role="alert"></p>
         <button id="saveConfigBtn" class="btn primary wide">Salvar configuração</button>
@@ -712,7 +712,7 @@
   function lsGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
   function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
   function lsHas(k){ try{ return localStorage.getItem(k)!==null; }catch(e){ return false; } }
-  const DEFAULT_SERVER_URL='https://treadmill-app.henriquecheib.workers.dev';
+  const DEFAULT_SERVER_URL='https://treadmill-app.henriquecheib.workers.dev/interpretar';
   function aiConfig(){
     const provider=providerDefaults[lsGet('esteira_ai_provider')] ? lsGet('esteira_ai_provider') : 'openai';
     const model=(lsGet('esteira_ai_model')||providerDefaults[provider].model).trim();
