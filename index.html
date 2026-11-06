@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#101211" />
+  <link rel="icon" href="data:," />
+  <title>App Treino em Esteira V0</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg:#f1f3ef; --panel:#ffffff; --panel-2:#e7eae5; --text:#111311; --muted:#586058;
+      --line:#d4d9d2; --lime:#177245; --lime-bright:#24a868; --amber:#f2c84b; --amber-text:#201a00;
+      --danger:#b53c32; --track:#dce1da; --shadow:0 16px 45px rgba(26,34,28,.11);
+      --radius:20px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:#090b0a; --panel:#141715; --panel-2:#1b1f1c; --text:#f3f6f2; --muted:#9ca69e;
+        --line:#2b302c; --lime:#43d98d; --lime-bright:#63eea5; --amber:#f2c84b; --amber-text:#181400;
+        --danger:#ff7066; --track:#292f2b; --shadow:0 18px 55px rgba(0,0,0,.35);
+      }
+    }
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{margin:0;height:100svh;overflow:hidden;background:var(--bg);color:var(--text);font-family:"Manrope",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    button,select,textarea,input{font:inherit}
+    button{touch-action:manipulation}
+    .app{width:min(100%,760px);height:100svh;margin:0 auto;padding:clamp(10px,2.2vh,20px) clamp(12px,3vw,24px) max(10px,env(safe-area-inset-bottom));overflow:hidden}
+    .topline{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:7px}
+    .workout-name{margin:0;font:800 clamp(24px,5.6vw,42px)/.92 "Barlow Condensed",sans-serif;letter-spacing:-.02em}
+    .steps{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+    .steps-row{display:flex;gap:3px;flex:1;min-width:0}
+    .step{flex:1;min-width:0;height:21px;border-radius:7px;background:var(--track);color:var(--muted);font-size:9px;font-weight:800;display:grid;place-items:center}
+    .step.done{background:color-mix(in srgb,var(--lime) 48%,var(--bg));color:var(--bg)}
+    .step.now{background:var(--lime);color:var(--bg);animation:nowpulse 2.2s ease-in-out infinite}
+    .step.rest{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--amber) 38%,var(--track)) 0 4px,color-mix(in srgb,var(--amber) 14%,var(--track)) 4px 8px)}
+    .step.rest.done{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--lime) 48%,var(--bg)) 0 4px,color-mix(in srgb,var(--amber) 60%,var(--track)) 4px 8px);color:var(--bg)}
+    .step.rest.now{background:var(--amber);color:var(--amber-text);animation:restpulse 2.2s ease-in-out infinite}
+    @keyframes nowpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--lime) 45%,transparent)}50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--lime) 0%,transparent)}}
+    @keyframes restpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--amber) 50%,transparent)}50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--amber) 0%,transparent)}}
+    .step-count{flex:none;color:var(--muted);font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
+    .current-label{color:var(--lime);font:700 clamp(17px,4vw,20px)/1.05 "Barlow Condensed",sans-serif;margin:4px 0 0}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .metrics{padding:clamp(12px,2.2vh,18px)}
+    .metric+.metric{border-top:1px solid var(--line);margin-top:clamp(10px,1.8vh,15px);padding-top:clamp(10px,1.8vh,15px)}
+    .metric-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .metric-label{display:block;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.11em;margin-bottom:2px}
+    .metric-value{font:700 clamp(44px,10vh,72px)/.78 "Barlow Condensed",sans-serif;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+    .target{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding-bottom:1px}
+    .target .t-label{color:var(--muted);font-weight:700;font-size:11.5px;white-space:nowrap}
+    .target strong{color:var(--text);font:600 clamp(20px,4vh,25px)/1 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+    .target.total .t-label{font-size:10px}
+    .target.total strong{font-size:clamp(16px,3.1vh,20px)}
+    .target.total .t-sub{color:var(--muted);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .progress{height:6px;background:var(--track);border-radius:99px;overflow:hidden}
+    .progress>span{display:block;width:0;height:100%;background:var(--lime);border-radius:inherit;transition:width .25s linear}
+    .alerts{display:grid;grid-template-columns:1.2fr 1fr;gap:8px;margin:8px 0}
+    .alert{min-height:clamp(72px,12vh,98px);padding:11px 13px;border-radius:15px;background:var(--panel-2);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+    .alert.transition{background:var(--amber);color:var(--amber-text);border-color:transparent}
+    .alert small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:4px}
+    .alert strong{font:700 clamp(16px,3.2vw,20px)/1.05 "Barlow Condensed",sans-serif}
+    .alert.transition strong{font-size:clamp(18px,3.8vw,23px)}
+    .alert.transition .hint{display:block;margin:5px 0 0;font-size:11px;font-weight:700;line-height:1.3;letter-spacing:0;text-transform:none;opacity:.9}
+    #speedHint[hidden]{display:none!important}
+    .nbdi{white-space:nowrap}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+    .btn{min-height:clamp(44px,7vh,52px);border:0;border-radius:14px;padding:9px 12px;background:var(--panel-2);color:var(--text);font-weight:800;cursor:pointer;border:1px solid var(--line)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--lime);color:#05160d;border-color:transparent}
+    .speed{padding:clamp(11px,2vh,18px) 20px;text-align:center;background:var(--panel);border:2px solid var(--lime);margin-top:8px}
+    .speed .label{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.12em;margin-bottom:3px}
+    .speed .number{font:800 clamp(64px,15vh,106px)/.73 "Barlow Condensed",sans-serif;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+    .speed .unit{font:700 20px/1 "Barlow Condensed",sans-serif;color:var(--lime);margin-left:5px}
+    #speedCard.alert{border-color:var(--amber)}
+    .speed-split{display:flex;gap:8px;text-align:left}
+    .speed-split[hidden]{display:none!important}
+    #speedSingle[hidden]{display:none!important}
+    .speed-item{flex:1;min-width:0;border-radius:13px;padding:7px 8px 9px;text-align:center}
+    .speed-item .k{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;margin-bottom:3px;white-space:nowrap}
+    .speed-item .v{font:800 clamp(44px,8.5vh,60px)/.8 "Barlow Condensed",sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+    .speed-item .u{font:700 14px/1 "Barlow Condensed",sans-serif;margin-left:5px}
+    .speed-item.cur{background:var(--panel-2);border:1px solid var(--line)}
+    .speed-item.cur .k{color:var(--muted)}
+    .speed-item.cur .u{color:var(--lime)}
+    .speed-item.tgt{background:var(--amber);color:var(--amber-text)}
+    .speed-item.tgt .k{color:var(--amber-text)}
+    .alert.urgent{animation:urgentpulse .8s ease-in-out infinite}
+    @keyframes urgentpulse{0%,100%{filter:none}50%{filter:brightness(1.14) saturate(1.15)}}
+    #reviewScreen.screen.active{justify-content:flex-start}
+    .editor{padding:12px 13px;margin-bottom:8px;flex:none}
+    .editor-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+    .editor-head strong{font:700 18px/1 "Barlow Condensed",sans-serif}
+    .chip{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:3px 8px;color:var(--muted)}
+    .editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .editor-grid input[type=text],.editor-grid input[type=number]{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px 11px;outline:none}
+    .editor-grid input:focus{border-color:var(--lime)}
+    .dur-row{display:flex;align-items:center;gap:5px}
+    .dur-row input{flex:1;min-width:0;text-align:center}
+    .dur-row span{color:var(--muted);font-size:11px;font-weight:800}
+    .field-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+    .lock-btn{flex:none;width:28px;height:28px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+    .lock-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .lock-btn .open{display:none}
+    .lock-btn:not(.locked) .closed{display:none}
+    .lock-btn:not(.locked) .open{display:block}
+    .lock-btn.locked{background:var(--lime);border-color:transparent;color:#05160d}
+    .lock-btn:disabled{opacity:.45;cursor:default}
+    .lock-note{color:var(--muted);font-size:11px;margin:8px 0 0;line-height:1.35}
+    .editor-nums{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:9px;margin-top:9px}
+    .editor-nums input[type=number]{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px 11px;outline:none}
+    .editor-nums input:focus{border-color:var(--lime)}
+    .editor-nums input:disabled{opacity:.55}
+    @media(max-width:560px){.editor-nums{grid-template-columns:1fr 1fr}.editor-nums .field:last-child{grid-column:1/-1}}
+    .field-help{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+    .review-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0;padding:2px 1px}
+    .block-row{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:8px 10px;color:var(--text);cursor:pointer}
+    .block-row.sel{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+    .block-row.is-rest{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--amber) 16%,var(--panel)) 0 6px,var(--panel) 6px 12px)}
+    .block-row .idx{flex:none;width:22px;height:22px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--muted)}
+    .block-row.sel .idx{background:var(--lime);color:#05160d;border-color:transparent}
+    .b-main{flex:1;min-width:0}
+    .b-label{display:block;font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .b-sub{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+    .b-flag{display:block;color:var(--danger);font-size:10.5px;font-weight:800;margin-top:2px}
+    .b-speed{flex:none;text-align:right;font:700 19px/1 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+    .b-speed small{display:block;font:700 9px/1 system-ui,sans-serif;color:var(--muted);letter-spacing:.08em;margin-top:2px}
+    .review-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-top:8px;flex:none}
+    .screen{display:none;height:100%}.screen.active{display:flex;flex-direction:column;justify-content:center}
+    #setupScreen.screen.active{justify-content:flex-start;overflow-y:auto}
+    #setupScreen.screen.active>.setup-intro{margin-top:auto}
+    #setupScreen.screen.active>.speed{margin-bottom:auto}
+    #runScreen.screen.active{justify-content:flex-start}
+    .setup-intro{margin:0 0 10px;font:700 clamp(24px,5vh,38px)/1 "Barlow Condensed",sans-serif;max-width:560px}
+    .setup-guide{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+    .guide-step{display:flex;gap:9px;align-items:flex-start;background:var(--panel-2);border-radius:12px;padding:9px 10px;color:var(--muted);font-size:11px;line-height:1.25}
+    .guide-step b{display:grid;place-items:center;flex:none;width:20px;height:20px;border-radius:50%;background:var(--lime);color:#06180e;font-size:11px}
+    .guide-step strong{display:block;color:var(--text);font-size:12px;margin-bottom:2px}
+    .setup-card{padding:clamp(13px,2vh,20px)}
+    .demo-title{margin:0;font:800 clamp(25px,4.5vh,32px)/1 "Barlow Condensed",sans-serif}.demo-meta{margin:4px 0 10px;color:var(--muted);font-size:12px;line-height:1.35}
+    .settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+    .field label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:4px}
+    select,textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px 11px;outline:none}
+    select:focus,textarea:focus{border-color:var(--lime)}
+    textarea{height:24vh;min-height:118px;max-height:210px;resize:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.4}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel-2);border-radius:13px;padding:8px 11px;margin:8px 0}
+    .toggle-row span:first-child{font-size:13px;font-weight:700}.toggle-row small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+    .switch{position:relative;width:48px;height:28px;flex:none}.switch input{appearance:none;-webkit-appearance:none;position:absolute;inset:0;width:48px;height:28px;margin:0;border:0;border-radius:99px;background:var(--track);cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}.switch input:after{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:var(--panel);box-shadow:0 2px 5px rgba(0,0,0,.25);transition:.2s}.switch input:checked{background:var(--lime)}.switch input:checked:after{transform:translateX(20px)}.switch input:focus-visible{outline:3px solid var(--amber);outline-offset:3px}.slider{display:none}
+    .wide{width:100%}.secondary-actions{display:flex;gap:10px;margin-top:10px}.secondary-actions>*{flex:1}
+    #setupScreen.empty .loaded-only{display:none!important}
+    #setupScreen:not(.empty) #emptyHint{display:none}
+    .import-btn{margin-top:9px;background:transparent;border:2px solid var(--lime);color:var(--lime)}.import-panel{padding-top:8px}.import-panel[hidden]{display:none!important}
+    .import-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.import-row .import-btn{margin-top:0;font-size:14.5px}
+    .photo-preview{width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:var(--bg);display:block;margin-bottom:8px}
+    .photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+    .api-guide{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:11px 12px;margin:0 0 10px}
+    .api-guide h2{margin:0 0 8px;font-size:13px;font-weight:800}
+    .api-guide ol{margin:0;padding-left:20px;display:grid;gap:7px}
+    .api-guide li{font-size:12px;line-height:1.35;color:var(--muted)}
+    .api-guide li strong{color:var(--text)}
+    .api-guide a{color:var(--lime);font-weight:800}
+    .config-fields{display:grid;gap:9px}
+    .key-row{display:flex;gap:8px;align-items:stretch}
+    .key-row .text-input{flex:1;min-width:0}
+    .text-input{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px 11px;outline:none}
+    .text-input:focus{border-color:var(--lime)}
+    .btn.danger{color:var(--danger);border-color:var(--danger)}
+    #configScreen.screen.active{justify-content:flex-start;overflow-y:auto}
+    .json-help{color:var(--muted);font-size:11px;line-height:1.35;margin:0 0 6px}.json-error{color:var(--danger);font-size:11px;min-height:15px;margin:4px 0}
+    #setupScreen.importing{justify-content:flex-start;overflow-y:auto}#setupScreen.importing .setup-intro,#setupScreen.importing .setup-guide,#setupScreen.importing #setupWorkoutName,#setupScreen.importing #setupMeta,#setupScreen.importing .settings,#setupScreen.importing .toggle-row,#setupScreen.importing #startBtn,#setupScreen.importing #reviewBtn,#setupScreen.importing #photoToggle,#setupScreen.importing>.speed{display:none}
+    #setupScreen.photoimporting{justify-content:flex-start;overflow-y:auto}#setupScreen.photoimporting .setup-intro,#setupScreen.photoimporting .setup-guide,#setupScreen.photoimporting #setupWorkoutName,#setupScreen.photoimporting #setupMeta,#setupScreen.photoimporting .settings,#setupScreen.photoimporting .toggle-row,#setupScreen.photoimporting #startBtn,#setupScreen.photoimporting #reviewBtn,#setupScreen.photoimporting #importToggle,#setupScreen.photoimporting>.speed{display:none}
+    .ready{text-align:center;padding:22px}.ready p{color:var(--muted);margin:8px auto 20px;max-width:430px}.ready .speed{margin:20px 0}
+    .cooldown{text-align:center}.cooldown .free-time{font:800 clamp(88px,25vw,142px)/.9 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums;margin:28px 0 8px}.cooldown p{color:var(--muted)}
+    .summary{padding:22px}.summary h2{font:800 40px/1 "Barlow Condensed",sans-serif;margin:0 0 18px}.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}.summary-stat{background:var(--panel-2);padding:15px;border-radius:12px}.summary-stat small{display:block;color:var(--muted);font-size:11px;font-weight:800}.summary-stat strong{font:700 28px/1.1 "Barlow Condensed",sans-serif;margin-top:5px;display:block}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:6px}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--lime)}.paused .status-dot{background:var(--amber)}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    @media(max-width:560px){
+      .app{padding-top:10px}.setup-intro{font-size:22px;margin-bottom:6px}.guide-step{padding:7px 8px}.demo-title{font-size:24px}.setup-card{padding:11px 12px}.setup-card .btn{min-height:44px}#setupScreen>.speed{padding-top:9px;padding-bottom:9px}#setupScreen>.speed .number{font-size:62px}
+      .setup-guide{grid-template-columns:1fr 1fr}.guide-step{padding:8px;font-size:10px}.guide-step strong{font-size:11px}.metrics{padding:12px 14px}.metric-value{font-size:min(52px,7.8vh)}.alerts{grid-template-columns:1.02fr .98fr}.speed{padding-inline:12px}.speed .number{font-size:min(82px,12vh)}.settings{grid-template-columns:1fr 1fr}.controls{grid-template-columns:1fr 1fr}.controls .btn:first-child{grid-column:auto}.alert{min-height:70px}
+    }
+    @media(max-height:680px){
+      .setup-intro{font-size:24px}.setup-guide{margin-bottom:6px}.guide-step{padding:6px 8px}.setup-card{padding:11px}.toggle-row small{display:none}.speed .number{font-size:60px}.speed-item .v{font-size:42px}.metric-value{font-size:42px}.alert{min-height:64px}.alert strong{font-size:15px}.alert.transition strong{font-size:17px}.btn{min-height:40px}.cooldown .free-time{margin:12px 0 4px;font-size:80px}.step{height:18px}.steps{margin-bottom:4px}.target.total .t-sub{display:none}
+    }
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.progress>span,.slider:after{transition:none}.step.now{animation:none}.step.rest.now{animation:none}.alert.urgent{animation:none}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="setupScreen" class="screen active" aria-labelledby="setupHeading">
+      <h1 id="setupHeading" class="setup-intro">Como colocar o treino e usar no celular</h1>
+      <div class="setup-guide" aria-label="Como usar">
+        <div class="guide-step"><b>1</b><span><strong>Importe o print do treino</strong>TrainingPeaks, Garmin, Strava… a IA lê o print e monta os blocos pra você conferir. Ou cole o JSON como alternativa avançada.</span></div>
+        <div class="guide-step"><b>2</b><span><strong>Abra este cartão no celular</strong>No app Muse, toque no mesmo cartão e comece antes de subir na esteira.</span></div>
+      </div>
+      <div class="card setup-card">
+        <h2 id="setupWorkoutName" class="demo-title loaded-only">10k 2x1.5k 2x1k 2x500m (01/10/2026)</h2>
+        <p id="setupMeta" class="demo-meta loaded-only"></p>
+        <div class="settings loaded-only">
+          <div class="field"><label for="treadmillUnit">Unidade da esteira</label><select id="treadmillUnit"><option value="mph">mph</option><option value="kmh">km/h</option></select></div>
+          <div class="field"><label for="displayUnit">Distância exibida</label><select id="displayUnit"><option value="km">quilômetros</option><option value="mi">milhas</option></select></div>
+        </div>
+        <div class="toggle-row loaded-only">
+          <span>Esperar a esteira acelerar<small>Você confirma quando estiver pronto; o tempo não corre.</small></span>
+          <label class="switch"><input id="waitToggle" type="checkbox" aria-label="Esperar a esteira acelerar" checked><span class="slider"></span></label>
+        </div>
+        <button id="startBtn" class="btn primary wide loaded-only">Começar</button>
+        <button id="reviewBtn" class="btn wide loaded-only" style="margin-top:8px">Revisar</button>
+        <p id="emptyHint" class="json-help" style="margin:0 0 2px">Nenhum treino carregado ainda. Importe um print ou cole o JSON do treino para começar.</p>
+        <div class="import-row">
+          <button id="photoToggle" class="btn wide import-btn" aria-expanded="false" aria-controls="photoPanel">Importar por imagem</button>
+          <button id="importToggle" class="btn wide import-btn" aria-expanded="false" aria-controls="importPanel">Colar treino em JSON</button>
+        </div>
+        <div id="photoPanel" class="import-panel" hidden>
+          <p class="json-help">Print do treino de qualquer fonte (TrainingPeaks, Garmin, Strava…). A IA interpreta os blocos pra você conferir e ajustar antes de começar. Faixas de ritmo usam o <b>extremo mais rápido</b>; velocidades em <b>km/h</b>, com a conversão pra esteira feita pelo app.</p>
+          <p class="json-help"><b>Sem chave de API?</b> Manda o print no chat do Muse que eu converto e te devolvo o treino pronto — aí é só colar em <b>Colar treino em JSON</b>.</p>
+          <div id="photoEmpty" class="photo-actions">
+            <button id="pickGallery" class="btn" type="button">Escolher imagem</button>
+            <button id="pickCamera" class="btn" type="button">Fotografar</button>
+          </div>
+          <div id="photoPreviewWrap" hidden>
+            <img id="photoPreview" class="photo-preview" alt="Print do treino selecionado">
+            <button id="removePhoto" class="btn wide" type="button" style="margin-bottom:8px">Remover imagem</button>
+          </div>
+          <input id="fileGallery" type="file" accept="image/*" hidden>
+          <input id="fileCamera" type="file" accept="image/*" capture="environment" hidden>
+          <p id="photoStatus" class="json-help" role="status"></p>
+          <p id="photoError" class="json-error" role="alert"></p>
+          <button id="interpretBtn" class="btn primary wide" disabled>Interpretar treino</button>
+          <button id="configBtn" class="btn wide" type="button" style="margin-top:8px">Configurar interpretação (chave de API)</button>
+        </div>
+        <div id="importPanel" class="import-panel" hidden>
+          <p class="json-help">Cole o texto do treino com os blocos (<b>rótulo</b>, <b>tipo</b>, <b>duração</b> em segundos, <b>velocidade</b> em mph). Vale também o formato <b>name/blocks</b> que eu mando no chat.</p>
+          <textarea id="jsonInput" aria-label="Treino em JSON" spellcheck="false" placeholder='{"name":"Meu treino","blocks":[{"label":"Aquecimento","kind":"aquecimento","durationSec":600,"speedMph":6.0}]}'></textarea>
+          <p id="jsonError" class="json-error" role="alert"></p>
+          <button id="loadBtn" class="btn wide">Carregar treino</button>
+        </div>
+      </div>
+      <section class="card speed loaded-only" aria-label="Velocidade inicial da esteira">
+        <span class="label">VELOCIDADE DA ESTEIRA</span>
+        <span id="setupSpeed" class="number">7.0</span><span id="setupSpeedUnit" class="unit">mph</span>
+      </section>
+    </section>
+
+    <section id="configScreen" class="screen" aria-labelledby="configHeading">
+      <h1 id="configHeading" class="setup-intro">Interpretar print com IA</h1>
+      <div class="card setup-card">
+        <p class="json-help">Cole a <b>sua chave de API</b> de um provedor de IA com visão — ou informe abaixo a <b>URL do servidor de interpretação</b>. Chave e URL ficam salvas <b>só neste aparelho</b>; nada é embutido na página.</p>
+        <div class="api-guide">
+          <h2>Chave gratuita do Google Gemini (1 minuto)</h2>
+          <ol>
+            <li>Abra <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer">aistudio.google.com</a> e entre com sua conta Google.</li>
+            <li>Clique em <strong>"Get API Key"</strong> e depois em <strong>"Create API key"</strong>.</li>
+            <li>Copie a chave gerada.</li>
+            <li>Aqui no app, selecione <strong>Google Gemini</strong> e cole a chave no campo abaixo.</li>
+            <li>Pronto — o <strong>"Importar por imagem"</strong> passa a funcionar. A chave fica salva só neste aparelho e é grátis para esse uso.</li>
+          </ol>
+        </div>
+        <div class="config-fields">
+          <div class="field"><label for="aiProvider">Provedor</label><select id="aiProvider"><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google Gemini</option></select></div>
+          <div class="field"><label for="aiModel">Modelo (com visão)</label><input id="aiModel" class="text-input" type="text" autocomplete="off" spellcheck="false"></div>
+          <div class="field"><label for="aiKey">Chave de API</label><div class="key-row"><input id="aiKey" class="text-input" type="password" autocomplete="off" spellcheck="false" placeholder="Cole sua chave"><button id="keyToggle" class="btn" type="button">Mostrar</button></div><small id="keyStatus" class="field-help"></small><small id="keyHint" class="field-help"></small></div>
+          <div class="field"><label for="aiServerUrl">URL do servidor de interpretação <span style="color:var(--muted);font-weight:700">(opcional)</span></label><input id="aiServerUrl" class="text-input" type="url" autocomplete="off" spellcheck="false" placeholder="https://seu-servidor.exemplo/interpretar"><small class="field-help">Com o servidor configurado a interpretação funciona para qualquer pessoa que abrir o app, sem chave própria.</small><small id="serverStatus" class="field-help"></small><small class="field-help">Se preenchido, o “Importar por imagem” envia a foto para essa URL e usa o treino que ela devolver — sem pedir chave de API. Se ficar vazio, vale a chave acima, direto no provedor. A URL também fica salva só neste aparelho.</small></div>
+        </div>
+        <p id="configMsg" class="json-error" role="alert"></p>
+        <button id="saveConfigBtn" class="btn primary wide">Salvar configuração</button>
+        <button id="clearKeyBtn" class="btn wide danger" type="button" style="margin-top:8px">Apagar chave salva</button>
+        <button id="configBack" class="btn wide" type="button" style="margin-top:8px">Voltar</button>
+      </div>
+    </section>
+
+    <section id="readyScreen" class="screen" aria-labelledby="readyHeading">
+      <div class="card ready">
+        <h1 id="readyHeading" class="demo-title">Prepare a esteira</h1>
+        <p>O cronômetro só começa quando você confirmar.</p>
+        <div class="card speed">
+          <span class="label">VELOCIDADE DA ESTEIRA</span>
+          <span id="readySpeed" class="number">7.0</span><span id="readyUnit" class="unit">mph</span>
+        </div>
+        <button id="readyBtn" class="btn primary wide">Pronto, iniciar treino</button>
+        <button id="readyBack" class="btn wide" style="margin-top:10px">Voltar</button>
+      </div>
+    </section>
+
+    <section id="runScreen" class="screen" aria-live="polite">
+      <div class="steps"><div id="stepsRow" class="steps-row" role="list" aria-label="Passos do treino"></div><span id="stepCount" class="step-count">1/1</span></div>
+      <div class="topline">
+        <div><h1 id="workoutName" class="workout-name"></h1><p id="currentLabel" class="current-label"></p></div>
+      </div>
+      <div id="runStatus" class="status-pill"><span class="status-dot"></span><span id="statusText">Em andamento</span></div>
+      <p id="wakeNote" class="json-help" style="margin:0 0 6px" hidden>mantenha esta tela aberta durante o treino</p>
+      <section class="card metrics" aria-label="Progresso do treino">
+        <div class="metric">
+          <div class="metric-row"><div><span class="metric-label">TEMPO DECORRIDO</span><span id="elapsedTime" class="metric-value">0:00</span></div><div class="target"><span class="t-label">Meta do bloco</span><strong id="targetTime">0:00</strong></div><div class="target total"><span class="t-label">Meta total</span><strong id="targetTimeTotal">0:00</strong><span class="t-sub"><span id="elapsedTimeTotal">0:00</span> decorrido</span></div></div>
+          <div class="progress"><span id="timeProgress"></span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-row"><div><span class="metric-label">DISTÂNCIA</span><span id="distance" class="metric-value">0.00</span></div><div class="target"><span class="t-label">Meta do bloco · <span id="distanceUnitLabel">km</span></span><strong id="targetDistance">0.00</strong></div><div class="target total"><span class="t-label">Meta total</span><strong id="targetDistanceTotal">0.00</strong><span class="t-sub"><span id="elapsedDistanceTotal">0.00</span> percorrido</span></div></div>
+          <div class="progress"><span id="distanceProgress"></span></div>
+        </div>
+      </section>
+      <div class="alerts">
+        <div id="actionAlert" class="alert transition"><small id="actionCountdown">PRÓXIMA AÇÃO</small><strong id="actionText"></strong><small id="speedHint" class="hint" hidden></small></div>
+        <div class="alert"><small>Na sequência</small><strong id="sequenceText"></strong></div>
+      </div>
+      <div class="controls">
+        <button id="pauseBtn" class="btn primary">Pausar</button>
+        <button id="nextBtn" class="btn" title="Encerra o bloco atual e avança">Próximo</button>
+      </div>
+      <section id="speedCard" class="card speed" aria-label="Velocidade atual da esteira">
+        <div id="speedSingle">
+          <span id="speedLabel" class="label">VELOCIDADE DA ESTEIRA</span>
+          <span id="speedValue" class="number">0.0</span><span id="speedUnit" class="unit">mph</span>
+        </div>
+        <div id="speedSplit" class="speed-split" hidden>
+          <div class="speed-item cur"><span class="k">ATUAL</span><span id="speedCur" class="v">0.0</span><span id="speedCurUnit" class="u">mph</span></div>
+          <div class="speed-item tgt"><span class="k"><span id="speedArrow">↑</span> AJUSTE PARA</span><span id="speedTgt" class="v">0.0</span><span id="speedTgtUnit" class="u">mph</span></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="reviewScreen" class="screen" aria-labelledby="reviewHeading">
+      <h1 id="reviewHeading" class="setup-intro">Validar treino</h1>
+      <p id="reviewMeta" class="demo-meta"></p>
+      <div class="card editor">
+        <div class="editor-head"><strong id="editorTitle">Bloco 1</strong><span id="editorKind" class="chip"></span></div>
+        <div class="editor-grid">
+          <div class="field"><label for="edLabel">Rótulo</label><input id="edLabel" type="text" autocomplete="off"></div>
+          <div class="field"><label for="edKind">Tipo</label><select id="edKind"><option value="aquecimento">Aquecimento</option><option value="tiro">Tiro</option><option value="descanso">Descanso</option><option value="desaquecimento">Desaquecimento</option><option value="bloco">Outro</option></select></div>
+        </div>
+        <div class="editor-nums">
+          <div class="field"><div class="field-head"><label>Tempo do bloco</label><button type="button" class="lock-btn" data-var="tempo" aria-pressed="false" aria-label="Fixar tempo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path class="closed" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path class="open" d="M8 10.5V8a4 4 0 0 1 7.9-1"/></svg></button></div><div class="dur-row"><input id="edMin" type="number" min="0" inputmode="numeric" aria-label="Minutos"><span>min</span><input id="edSec" type="number" min="0" max="59" inputmode="numeric" aria-label="Segundos"><span>s</span></div></div>
+          <div class="field"><div class="field-head"><label for="edSpeed">Velocidade (<span id="edSpeedUnit">km/h</span>)</label><button type="button" class="lock-btn" data-var="velocidade" aria-pressed="false" aria-label="Fixar velocidade"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path class="closed" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path class="open" d="M8 10.5V8a4 4 0 0 1 7.9-1"/></svg></button></div><input id="edSpeed" type="number" min="0" step="0.1" inputmode="decimal"><small id="edSpeedHelp" class="field-help"></small></div>
+          <div class="field"><div class="field-head"><label for="edDist">Distância (<span id="edDistUnit">km</span>)</label><button type="button" class="lock-btn" data-var="distancia" aria-pressed="false" aria-label="Fixar distância"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path class="closed" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path class="open" d="M8 10.5V8a4 4 0 0 1 7.9-1"/></svg></button></div><input id="edDist" type="number" min="0" step="0.01" inputmode="decimal"><small id="edDistHelp" class="field-help"></small></div>
+        </div>
+        <p id="lockMsg" class="lock-note">Toque no cadeado para fixar uma variável do bloco (só uma por vez); as outras se ajustam para fechar a conta.</p>
+      </div>
+      <div id="reviewList" class="review-list" aria-label="Blocos do treino"></div>
+      <div class="review-actions">
+        <button id="reviewBack" class="btn">Voltar</button>
+        <button id="reviewStart" class="btn primary">Começar treino</button>
+      </div>
+    </section>
+
+    <section id="cooldownScreen" class="screen cooldown" aria-labelledby="cooldownHeading">
+      <div class="card ready">
+        <h1 id="cooldownHeading" class="demo-title">Treino concluído</h1>
+        <p>Se quiser, continue correndo livremente. Esse tempo entra no seu resumo.</p>
+        <div id="freeTime" class="free-time">0:00</div>
+        <button id="freeRunBtn" class="btn primary wide">Continuar correndo</button>
+        <button id="finishBtn" class="btn wide" style="margin-top:10px">Finalizar treino</button>
+      </div>
+    </section>
+
+    <section id="summaryScreen" class="screen" aria-labelledby="summaryHeading">
+      <div class="card summary">
+        <h1 id="summaryHeading">Treino finalizado</h1>
+        <div class="summary-grid">
+          <div class="summary-stat"><small>TEMPO TOTAL</small><strong id="summaryTime">0:00</strong></div>
+          <div class="summary-stat"><small>DISTÂNCIA</small><strong id="summaryDistance">0.00 km</strong></div>
+          <div class="summary-stat"><small>BLOCOS FEITOS</small><strong id="summaryBlocks">0/0</strong></div>
+          <div class="summary-stat"><small>PULADOS</small><strong id="summarySkipped">0</strong></div>
+        </div>
+        <button id="restartBtn" class="btn primary wide">Fazer outro treino</button>
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  // Empty state: nenhum treino carregado até o usuário importar um print ou colar o JSON.
+  let workout = null;
+  let state = 'setup', index = 0, elapsed = 0, blockElapsed = 0, distanceMiles = 0, freeElapsed = 0;
+  let timer = null, audioCtx = null, skipped = 0, completed = 0, countdownBeeped = -1;
+  let anchor = 0, elapsedAnchor = 0, blockAnchor = 0, distBase = 0, freeAnchor = 0, wakeLock = null;
+  let editIndex = 0, speedWarned = false;
+  let selectedImage = null, interpreting = false;
+
+  const screens = ['setupScreen','readyScreen','reviewScreen','runScreen','cooldownScreen','summaryScreen','configScreen'];
+  function show(id){ screens.forEach(s => $(s).classList.toggle('active', s===id)); window.scrollTo({top:0,behavior:'smooth'}); }
+  function fmt(sec){ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+  function num(v){ return Number(v).toFixed(1); }
+  function setRich(el,parts){el.innerHTML='';for(const p of parts){if(Array.isArray(p)){const s=document.createElement('span');s.className='nbdi';s.textContent=p[0];el.appendChild(s);}else{el.appendChild(document.createTextNode(p));}}}
+  function mphDisplay(v){ return $('treadmillUnit').value==='kmh' ? v*1.609344 : v; }
+  // Velocidade de exibição (a que o usuário ajusta): km/h quando a distância é km, mph quando é mi.
+  // A velocidade interna do bloco fica sempre em mph (esteira); a conversão acontece aqui.
+  function displaySpeedFromMph(v){ return $('displayUnit').value==='km' ? v*1.609344 : v; }
+  function mphFromDisplaySpeed(v){ return $('displayUnit').value==='km' ? v/1.609344 : v; }
+  function displaySpeedUnit(){ return $('displayUnit').value==='km' ? 'km/h' : 'mph'; }
+  function treadmillSpeedFromMph(v){ return $('treadmillUnit').value==='kmh' ? (v*1.609344).toFixed(1)+' km/h' : v.toFixed(1)+' mph'; }
+  function paceFromMph(v){
+    if(!v) return '—';
+    const unit=$('displayUnit').value;
+    const mins = unit==='km' ? 60/(v*1.609344) : 60/v;
+    const whole=Math.floor(mins), secs=Math.round((mins-whole)*60);
+    return `${whole}:${String(secs===60?0:secs).padStart(2,'0')}/${unit}`;
+  }
+  function totalDuration(){ return workout.blocos.reduce((a,b)=>a+b.duracao,0); }
+  function blockTargetMi(b){ return b.tipo==='descanso'?0:(b._distKm!=null?b._distKm/1.609344:b.velocidade*b.duracao/3600); }
+  function totalMiles(){ return workout.blocos.reduce((a,b)=>a+blockTargetMi(b),0); }
+  function distKmOf(b){ return b.velocidade*b.duracao/3600*1.609344; }
+  // Distância exibida no bloco: recalculada de velocidade × tempo, ou o valor manual congelado com o ajuste desligado
+  function shownDist(b){ if(b.tipo==='descanso') return 0; const km=(b._distKm!=null?b._distKm:distKmOf(b)); return $('displayUnit').value==='km'?km:km/1.609344; }
+  function blockDistMi(b){ return (b._distKm!=null?b._distKm:distKmOf(b))/1.609344; }
+  function isRestBlock(b){ return b.tipo==='descanso'; }
+  function shownDistance(mi){ return $('displayUnit').value==='km' ? mi*1.609344 : mi; }
+  function meta(){
+    if(!workout||!workout.blocos.length) return;
+    $('setupMeta').textContent=`${workout.blocos.length} blocos · ${fmt(totalDuration())} · ${shownDistance(totalMiles()).toFixed(2)} ${$('displayUnit').value}`;
+    $('setupSpeed').textContent=num(mphDisplay(workout.blocos[0].velocidade));
+    $('setupSpeedUnit').textContent=$('treadmillUnit').value==='kmh'?'km/h':'mph';
+  }
+  // Alterna entre o empty state (só as opções de importar) e o estado com treino carregado (Revisar / Começar).
+  function renderSetup(){
+    const has=!!(workout&&workout.blocos&&workout.blocos.length);
+    $('setupScreen').classList.toggle('empty',!has);
+    if(has) meta();
+  }
+  const kindNames={aquecimento:'Aquecimento',tiro:'Tiro',descanso:'Descanso',desaquecimento:'Desaquecimento',bloco:'Outro'};
+  function renderReview(){
+    $('reviewMeta').textContent=`${workout.nome} · ${workout.blocos.length} blocos · ${fmt(totalDuration())} · ${shownDistance(totalMiles()).toFixed(2)} ${$('displayUnit').value} — toque num bloco para ajustar tempo, velocidade e distância.`;
+    const list=$('reviewList');list.innerHTML='';
+    const unit=displaySpeedUnit();
+    workout.blocos.forEach((b,i)=>{
+      const row=document.createElement('button');row.type='button';
+      row.className='block-row'+(i===editIndex?' sel':'')+(isRestBlock(b)?' is-rest':'');
+      const idx=document.createElement('span');idx.className='idx';idx.textContent=i+1;
+      const main=document.createElement('span');main.className='b-main';
+      const lab=document.createElement('span');lab.className='b-label';lab.textContent=b.rotulo;
+      const sub=document.createElement('span');sub.className='b-sub';sub.textContent=`${kindNames[b.tipo]||b.tipo} · ${fmt(b.duracao)} · ${shownDist(b).toFixed(2)} ${$('displayUnit').value}`;
+      main.append(lab,sub);
+      const prev=workout.blocos[i-1];
+      if(prev&&!isRestBlock(prev)&&!isRestBlock(b)&&Math.abs(b.velocidade-prev.velocidade)>.001){
+        const f=document.createElement('span');f.className='b-flag';
+        f.textContent=`${b.velocidade>prev.velocidade?'↑':'↓'} velocidade muda sem descanso`;
+        main.appendChild(f);
+      }
+      const spd=document.createElement('span');spd.className='b-speed';
+      const spdV=document.createElement('span');spdV.textContent=num(displaySpeedFromMph(b.velocidade));
+      const spdU=document.createElement('small');spdU.textContent=unit;
+      spd.append(spdV,spdU);
+      row.append(idx,main,spd);
+      row.setAttribute('aria-label',`Editar bloco ${i+1}: ${b.rotulo}`);
+      row.addEventListener('click',()=>{editIndex=i;renderReview();});
+      list.appendChild(row);
+    });
+    fillEditor();
+  }
+  function fillEditor(){
+    const b=workout.blocos[editIndex];if(!b)return;
+    $('editorTitle').textContent=`Bloco ${editIndex+1} de ${workout.blocos.length}`;
+    $('editorKind').textContent=kindNames[b.tipo]||b.tipo;
+    if(document.activeElement!==$('edLabel'))$('edLabel').value=b.rotulo;
+    $('edKind').value=kindNames[b.tipo]?b.tipo:'bloco';
+    if(document.activeElement!==$('edMin'))$('edMin').value=Math.floor(b.duracao/60);
+    if(document.activeElement!==$('edSec'))$('edSec').value=Math.round(b.duracao%60);
+    $('edSpeedUnit').textContent=displaySpeedUnit();
+    if(document.activeElement!==$('edSpeed'))$('edSpeed').value=num(displaySpeedFromMph(b.velocidade));
+    $('edSpeedHelp').textContent=`Esteira: ${treadmillSpeedFromMph(b.velocidade)} · ritmo ${paceFromMph(b.velocidade)}`;
+    const restBlock=isRestBlock(b);
+    const distLockBtn=document.querySelector('.lock-btn[data-var="distancia"]');
+    if(distLockBtn) distLockBtn.disabled=restBlock;
+    $('edDist').disabled=restBlock;
+    if(document.activeElement!==$('edDist'))$('edDist').value=shownDist(b).toFixed(2);
+    $('edDistUnit').textContent=$('displayUnit').value;
+    if(restBlock){ $('edDistHelp').textContent='Descanso não soma distância'; }
+    else { const sd=shownDist(b); $('edDistHelp').textContent=$('displayUnit').value==='km'?`= ${(sd/1.609344).toFixed(2)} mi`:`= ${(sd*1.609344).toFixed(2)} km`; }
+    syncLocks();
+  }
+  function editorChanged(){ renderReview(); meta(); }
+  function openReview(){ editIndex=0; renderReview(); state='review'; show('reviewScreen'); }
+  function initAudio(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }
+  function beep(freq=880, duration=.13, delay=0){ if(!audioCtx)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(.001,audioCtx.currentTime+delay);g.gain.exponentialRampToValueAtTime(.18,audioCtx.currentTime+delay+.015);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+delay+duration);o.connect(g).connect(audioCtx.destination);o.start(audioCtx.currentTime+delay);o.stop(audioCtx.currentTime+delay+duration+.02); }
+  function transitionSound(){ beep(740,.12);beep(1040,.18,.17); }
+  function current(){ return workout.blocos[index]; }
+  function next(){ return workout.blocos[index+1]; }
+  // Durante o descanso a distância não conta e a esteira fica na velocidade do bloco anterior
+  function effectiveSpeed(i){
+    const b=workout.blocos[i];
+    if(!isRestBlock(b)) return b.velocidade;
+    for(let j=i-1;j>=0;j--) if(!isRestBlock(workout.blocos[j])) return workout.blocos[j].velocidade;
+    return b.velocidade;
+  }
+  function renderSteps(){
+    const row=$('stepsRow');row.innerHTML='';
+    workout.blocos.forEach((b,i)=>{
+      const s=document.createElement('span');
+      s.className='step'+(i<index?' done':i===index?' now':'')+(b.tipo==='descanso'?' rest':'');
+      s.textContent=i+1;s.title=`${b.rotulo} · ${fmt(b.duracao)}`;s.setAttribute('role','listitem');
+      s.setAttribute('aria-label',`Passo ${i+1} de ${workout.blocos.length}: ${b.rotulo}${i===index?' (atual)':''}`);
+      if(i===index)s.setAttribute('aria-current','step');
+      row.appendChild(s);
+    });
+    $('stepCount').textContent=`${index+1}/${workout.blocos.length}`;
+  }
+  function update(){
+    const b=current(), n=next(), n2=workout.blocos[index+2], remaining=Math.max(0,b.duracao-blockElapsed), total=totalDuration(), td=totalMiles(), blockPct=Math.min(100,blockElapsed/b.duracao*100);
+    $('workoutName').textContent=workout.nome;$('currentLabel').textContent=b.rotulo;
+    $('elapsedTime').textContent=fmt(blockElapsed);$('targetTime').textContent=fmt(b.duracao);
+    $('targetTimeTotal').textContent=fmt(total);$('elapsedTimeTotal').textContent=fmt(elapsed);
+    $('timeProgress').style.width=`${blockPct}%`;
+    const rest=isRestBlock(b), curSpeed=effectiveSpeed(index);
+    $('distance').textContent=shownDistance(b.duracao>0?blockTargetMi(b)*blockElapsed/b.duracao:0).toFixed(2);
+    $('targetDistance').textContent=shownDistance(blockTargetMi(b)).toFixed(2);
+    $('targetDistanceTotal').textContent=shownDistance(td).toFixed(2);
+    $('elapsedDistanceTotal').textContent=shownDistance(distanceMiles).toFixed(2);
+    $('distanceUnitLabel').textContent=$('displayUnit').value;
+    $('distanceProgress').style.width=rest?'0%':`${blockPct}%`;
+    const unit=$('treadmillUnit').value==='kmh'?'km/h':'mph', hint=$('speedHint');
+    let adjustTo=null;
+    $('actionCountdown').textContent=`PRÓXIMA AÇÃO · EM ${fmt(remaining)}`;
+    if(!n){ $('actionText').textContent='Finalizar o treino';hint.hidden=true; }
+    else if(n.tipo==='descanso'){
+      const after=workout.blocos[index+2];
+      if(after){
+        const target=`${num(mphDisplay(after.velocidade))} ${unit}`;
+        const adiff=after.velocidade-curSpeed;
+        if(Math.abs(adiff)>.001){
+          setRich($('actionText'),['Descansar, ',[`${adiff>0?'↑':'↓'} ajuste para ${target}`]]);
+          setRich(hint,[`${after.rotulo} vem logo depois: descanse enquanto muda a velocidade, já deixando `,[target],'.']);
+          hint.hidden=false;adjustTo={diff:adiff,speed:target,targetMph:after.velocidade};
+        } else { setRich($('actionText'),[`${n.rotulo} · `,[target]]);hint.hidden=true; }
+      } else { setRich($('actionText'),[n.rotulo]);hint.hidden=true; }
+    }
+    else{
+      const speed=`${num(mphDisplay(n.velocidade))} ${unit}`;
+      const diff=n.velocidade-curSpeed;
+      if(Math.abs(diff)>.001){
+        if(rest){
+          setRich($('actionText'),[`${n.rotulo} · `,[speed]]);
+          setRich(hint,[`${diff>0?'↑':'↓'} Ajuste para `,[speed],' durante o descanso']);
+        }else{
+          setRich($('actionText'),[`${diff>0?'↑':'↓'} Mude para `,[speed]]);
+          setRich(hint,['Sem intervalo entre os blocos: saia de ',[`${num(mphDisplay(curSpeed))} ${unit}`],' direto para ',[speed],` ao começar ${n.rotulo}.`]);
+        }
+        hint.hidden=false;adjustTo={diff,speed,targetMph:n.velocidade};
+      } else { setRich($('actionText'),[`${n.rotulo} · `,[speed]]); hint.hidden=true; }
+    }
+    $('sequenceText').textContent=!n2?'Cooldown livre':(isRestBlock(n2)?`${n2.rotulo} · ${fmt(n2.duracao)}`:`${n2.rotulo} · ${fmt(n2.duracao)} · ${paceFromMph(n2.velocidade)}`);
+    $('speedValue').textContent=num(mphDisplay(curSpeed));$('speedUnit').textContent=unit;
+    const speedCard=$('speedCard'),speedSingle=$('speedSingle'),speedSplit=$('speedSplit');
+    if(adjustTo){ /* separa a velocidade atual do alvo do ajuste, sem contradição */
+      speedSingle.hidden=true;speedSplit.hidden=false;speedCard.classList.add('alert');
+      const cur=`${num(mphDisplay(curSpeed))} ${unit}`,tgt=`${num(mphDisplay(adjustTo.targetMph))} ${unit}`;
+      $('speedCur').textContent=num(mphDisplay(curSpeed));$('speedCurUnit').textContent=unit;
+      $('speedTgt').textContent=num(mphDisplay(adjustTo.targetMph));$('speedTgtUnit').textContent=unit;
+      $('speedArrow').textContent=adjustTo.diff>0?'↑':'↓';
+      speedCard.setAttribute('aria-label',`Velocidade da esteira: atual ${cur}; ajuste para ${tgt}`);
+    }else{
+      speedSingle.hidden=false;speedSplit.hidden=true;
+      speedCard.setAttribute('aria-label','Velocidade atual da esteira');
+      speedCard.classList.remove('alert');$('speedLabel').textContent=rest?'VELOCIDADE DA ESTEIRA · MANTIDA DO TIRO ANTERIOR':'VELOCIDADE DA ESTEIRA';
+    }
+    $('actionAlert').style.filter=remaining<=15?'none':'saturate(.68) brightness(.94)';
+    const imminentChange=!rest&&!!adjustTo;
+    $('actionAlert').classList.toggle('urgent',imminentChange&&remaining<=15);
+    if(state==='running'&&imminentChange&&remaining<=10&&!speedWarned){speedWarned=true;beep(1240,.12);beep(1560,.18,.15);}
+    if(state==='running' && remaining<=3 && remaining>0 && Math.ceil(remaining)!==countdownBeeped){countdownBeeped=Math.ceil(remaining);beep(620,.08);}
+  }
+  // Tempo sempre derivado de timestamps (âncora de relógio), nunca de somas por
+  // frame: se o navegador desacelerar os timers com a aba em segundo plano, o
+  // relógio do treino continua certo ao voltar.
+  function syncTimes(){
+    const t=(state==='running'||state==='free')?Math.max(0,(performance.now()-anchor)/1000):0;
+    elapsed=elapsedAnchor+t;blockElapsed=blockAnchor+t;
+    const b=workout?current():null;
+    distanceMiles=distBase+(b&&b.duracao>0?blockTargetMi(b)*Math.min(blockElapsed,b.duracao)/b.duracao:0);
+  }
+  // Wake Lock: mantém a tela acesa durante o treino. O navegador libera sozinho
+  // quando a aba sai de vista; pedimos de novo ao voltar (visibilitychange).
+  async function requestWakeLock(){
+    if(!('wakeLock' in navigator)) return;
+    try{ wakeLock=await navigator.wakeLock.request('screen'); }catch(e){ wakeLock=null; }
+  }
+  function releaseWakeLock(){ if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock=null; } }
+  function tick(){
+    if(state!=='running' && state!=='free') return;
+    if(state==='running'){
+      syncTimes();
+      if(blockElapsed>=current().duracao){ completed++; advance(false); }
+      else update();
+    } else { freeElapsed=freeAnchor+Math.max(0,(performance.now()-anchor)/1000); $('freeTime').textContent=fmt(freeElapsed); }
+    timer=requestAnimationFrame(tick);
+  }
+  function startLoop(){ cancelAnimationFrame(timer);anchor=performance.now();timer=requestAnimationFrame(tick); }
+  function advance(wasSkipped){
+    if(wasSkipped) skipped++;
+    syncTimes(); // congela tempo e distância do bloco que terminou antes de trocar a âncora
+    distBase=distanceMiles;elapsedAnchor=elapsed;blockAnchor=0;blockElapsed=0;
+    transitionSound();index++;countdownBeeped=-1;speedWarned=false;
+    if(index>=workout.blocos.length){ state='cooldown';cancelAnimationFrame(timer);releaseWakeLock();show('cooldownScreen');return; }
+    anchor=performance.now();
+    renderSteps();update();
+  }
+  function begin(){ initAudio();state='running';show('runScreen');$('wakeNote').hidden=('wakeLock' in navigator);requestWakeLock();renderSteps();update();startLoop(); }
+  function resetRuntime(){ index=0;elapsed=0;blockElapsed=0;distanceMiles=0;freeElapsed=0;skipped=0;completed=0;countdownBeeped=-1;speedWarned=false;elapsedAnchor=0;blockAnchor=0;distBase=0;freeAnchor=0;anchor=performance.now();cancelAnimationFrame(timer); }
+
+  $('displayUnit').addEventListener('change',()=>{meta();if(state==='review')renderReview();});$('treadmillUnit').addEventListener('change',()=>{meta();if(state==='review')renderReview();});
+  function closePhotoPanel(){ $('photoPanel').hidden=true;$('setupScreen').classList.remove('photoimporting');$('photoToggle').setAttribute('aria-expanded','false');$('photoToggle').textContent='Importar por imagem'; }
+  function closeJsonPanel(){ $('importPanel').hidden=true;$('setupScreen').classList.remove('importing');$('importToggle').setAttribute('aria-expanded','false');$('importToggle').textContent='Colar treino em JSON'; }
+  $('photoToggle').addEventListener('click',()=>{
+    if($('photoPanel').hidden){
+      closeJsonPanel();
+      $('photoPanel').hidden=false;$('setupScreen').classList.add('photoimporting');$('photoToggle').setAttribute('aria-expanded','true');$('photoToggle').textContent='‹ Voltar';renderPhotoState();
+    } else closePhotoPanel();
+  });
+  $('importToggle').addEventListener('click',()=>{
+    const panel=$('importPanel'),opening=panel.hidden;
+    if(opening){ closePhotoPanel(); panel.hidden=false;$('setupScreen').classList.add('importing');$('importToggle').setAttribute('aria-expanded','true');$('importToggle').textContent='‹ Voltar'; }
+    else closeJsonPanel();
+  });
+  function goStart(){ resetRuntime();initAudio();if($('waitToggle').checked){$('readySpeed').textContent=num(mphDisplay(current().velocidade));$('readyUnit').textContent=$('treadmillUnit').value==='kmh'?'km/h':'mph';show('readyScreen');state='ready';}else begin(); }
+  $('startBtn').addEventListener('click',goStart);
+  $('reviewStart').addEventListener('click',goStart);
+  $('reviewBtn').addEventListener('click',openReview);
+  $('reviewBack').addEventListener('click',()=>{state='setup';show('setupScreen');meta();});
+  $('edLabel').addEventListener('input',()=>{workout.blocos[editIndex].rotulo=$('edLabel').value;editorChanged();});
+  $('edKind').addEventListener('change',()=>{workout.blocos[editIndex].tipo=$('edKind').value;editorChanged();});
+  function readDuration(){
+    const m=Math.max(0,parseInt($('edMin').value,10)||0),s=Math.min(59,Math.max(0,parseInt($('edSec').value,10)||0));
+    const total=m*60+s;if(total>0)workout.blocos[editIndex].duracao=total;
+  }
+  const defaultLockMsg='Toque no cadeado para fixar uma variável do bloco (só uma por vez); as outras se ajustam para fechar a conta.';
+  function syncLocks(){
+    const fixed=(workout.blocos[editIndex]||{})._fix||null;
+    document.querySelectorAll('.lock-btn').forEach(btn=>{
+      const locked=btn.dataset.var===fixed;
+      btn.classList.toggle('locked',locked);
+      btn.setAttribute('aria-pressed',String(locked));
+    });
+  }
+  // Mantém distância = velocidade × tempo após editar uma variável, sem tocar na variável fixada do bloco.
+  // No máximo uma variável fixada por bloco: com uma fixada, a terceira (livre) é recalculada;
+  // sem nenhuma fixada, vale a prioridade padrão (editou tempo/velocidade → distância; editou distância → tempo).
+  function recalc(edited, distMiAnchor, newDistMi){
+    const b=workout.blocos[editIndex];
+    if(isRestBlock(b)) return;
+    const fixed=b._fix||null;
+    const others=['tempo','velocidade','distancia'].filter(x=>x!==edited);
+    const target=(fixed&&others.includes(fixed))?others.find(x=>x!==fixed):(edited==='distancia'?'tempo':'distancia');
+    const anchorMi=edited==='distancia'?newDistMi:distMiAnchor;
+    if(target==='distancia'){
+      delete b._distKm; // distância volta a derivar de velocidade × tempo
+    } else if(target==='tempo'){
+      if(b.velocidade>0){
+        b.duracao=Math.max(1,Math.round(anchorMi/b.velocidade*3600));
+        if(edited==='distancia') delete b._distKm; else b._distKm=anchorMi*1.609344;
+      } else {
+        b._distKm=anchorMi*1.609344; // sem velocidade não dá pra derivar o tempo; guarda a distância digitada
+      }
+    } else { // velocidade
+      b._distKm=anchorMi*1.609344;
+      if(b.duracao>0) b.velocidade=anchorMi/b.duracao*3600;
+    }
+  }
+  $('edMin').addEventListener('input',()=>{const b=workout.blocos[editIndex],a=blockDistMi(b);readDuration();recalc('tempo',a);editorChanged();});
+  $('edSec').addEventListener('input',()=>{const b=workout.blocos[editIndex],a=blockDistMi(b);readDuration();recalc('tempo',a);editorChanged();});
+  $('edSpeed').addEventListener('input',()=>{const v=parseFloat(String($('edSpeed').value).replace(',','.'));if(Number.isFinite(v)&&v>=0){const b=workout.blocos[editIndex],a=blockDistMi(b);b.velocidade=mphFromDisplaySpeed(v);recalc('velocidade',a);}editorChanged();});
+  $('edDist').addEventListener('input',()=>{
+    const v=parseFloat(String($('edDist').value).replace(',','.'));
+    if(!Number.isFinite(v)||v<0)return;
+    const b=workout.blocos[editIndex];
+    const newMi=$('displayUnit').value==='km'?v/1.609344:v;
+    recalc('distancia',blockDistMi(b),newMi);
+    editorChanged();
+  });
+  document.querySelectorAll('.lock-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const v=btn.dataset.var, b=workout.blocos[editIndex];
+      if(!b) return;
+      const wasFix=b._fix||null;
+      b._fix=wasFix===v?null:v; // tipo radio: fixar uma solta qualquer outra; tocar de novo solta
+      if(b._fix==='distancia'&&!isRestBlock(b)) b._distKm=(b._distKm!=null?b._distKm:distKmOf(b)); // congela a distância fixada
+      if(wasFix==='distancia'&&b._fix!=='distancia') delete b._distKm; // distância liberada volta a derivar de velocidade × tempo
+      $('lockMsg').textContent=defaultLockMsg;
+      syncLocks();
+    });
+  });
+  $('readyBtn').addEventListener('click',begin);$('readyBack').addEventListener('click',()=>{state='setup';show('setupScreen')});
+  $('pauseBtn').addEventListener('click',()=>{ if(state==='running'){ syncTimes();elapsedAnchor=elapsed;blockAnchor=blockElapsed;state='paused';cancelAnimationFrame(timer);$('pauseBtn').textContent='Retomar';$('statusText').textContent='Pausado';$('runStatus').classList.add('paused'); }else if(state==='paused'){ state='running';$('pauseBtn').textContent='Pausar';$('statusText').textContent='Em andamento';$('runStatus').classList.remove('paused');requestWakeLock();startLoop(); } });
+  $('nextBtn').addEventListener('click',()=>{
+    if(state!=='running'&&state!=='paused')return;
+    const wasPaused=state==='paused';
+    completed++;advance(false);
+    if(state==='cooldown')return;
+    if(wasPaused){ state='running';$('pauseBtn').textContent='Pausar';$('statusText').textContent='Em andamento';$('runStatus').classList.remove('paused');requestWakeLock(); }
+    startLoop();
+  });
+  $('freeRunBtn').addEventListener('click',()=>{initAudio();if(state==='free'){ freeElapsed=freeAnchor+Math.max(0,(performance.now()-anchor)/1000);freeAnchor=freeElapsed;state='cooldown';cancelAnimationFrame(timer);$('freeRunBtn').textContent='Continuar correndo'; }else{ state='free';freeAnchor=freeElapsed;$('freeRunBtn').textContent='Pausar corrida livre';requestWakeLock();startLoop(); }});
+  $('finishBtn').addEventListener('click',()=>{cancelAnimationFrame(timer);releaseWakeLock();state='summary';$('summaryTime').textContent=fmt(elapsed+freeElapsed);$('summaryDistance').textContent=`${shownDistance(distanceMiles).toFixed(2)} ${$('displayUnit').value}`;$('summaryBlocks').textContent=`${completed}/${workout.blocos.length}`;$('summarySkipped').textContent=skipped;show('summaryScreen');});
+  $('restartBtn').addEventListener('click',()=>{state='setup';resetRuntime();$('pauseBtn').textContent='Pausar';$('statusText').textContent='Em andamento';$('runStatus').classList.remove('paused');show('setupScreen');meta();});
+  $('loadBtn').addEventListener('click',()=>{
+    $('jsonError').textContent='';
+    try{
+      const parsed=JSON.parse($('jsonInput').value), blocks=Array.isArray(parsed)?parsed:(parsed.blocos||parsed.blocks), name=Array.isArray(parsed)?'Treino importado':(parsed.nome||parsed.name||'Treino importado');
+      if(!Array.isArray(blocks)||!blocks.length) throw new Error('Inclua pelo menos um bloco.');
+      const clean=blocks.map((b,i)=>{
+        const rotulo=String(b.rotulo??b.rótulo??b.label??'').trim(),tipo=String(b.tipo??b.kind??'bloco').trim(),duracao=Number(b.duracao??b['duração']??b.durationSec),velocidade=Number(b.velocidade??b.speedMph);
+        if(!rotulo||!Number.isFinite(duracao)||duracao<=0||!Number.isFinite(velocidade)||velocidade<0) throw new Error(`Bloco ${i+1}: revise rótulo, duração e velocidade.`);
+        return {rotulo,tipo,duracao,velocidade};
+      });
+      workout={nome:String(name),blocos:clean};$('setupWorkoutName').textContent=workout.nome;$('jsonInput').value='';closeJsonPanel();renderSetup();
+    }catch(e){$('jsonError').style.color='var(--danger)';$('jsonError').textContent=e.message||'JSON inválido.';}
+  });
+  // ===== Importação por print (IA com a chave do próprio usuário) =====
+  const providerDefaults={
+    openai:{model:'gpt-4o-mini',hint:'Pegue a sua em platform.openai.com, em API keys. Modelo precisa ter visão (ex.: gpt-4o-mini, gpt-4o).'},
+    anthropic:{model:'claude-sonnet-4-5',hint:'Pegue a sua no console.anthropic.com, em Settings → API Keys. Modelo precisa ter visão (ex.: claude-sonnet-4-5).'},
+    gemini:{model:'gemini-2.5-flash',hint:'Pegue a sua no Google AI Studio (aistudio.google.com), em Get API key. Modelo precisa ter visão (ex.: gemini-2.5-flash).'}
+  };
+  function lsGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+  function aiConfig(){
+    const provider=providerDefaults[lsGet('esteira_ai_provider')] ? lsGet('esteira_ai_provider') : 'openai';
+    const model=(lsGet('esteira_ai_model')||providerDefaults[provider].model).trim();
+    return { key:lsGet('esteira_ai_key').trim(), provider, model:model||providerDefaults[provider].model, serverUrl:lsGet('esteira_ai_server_url').trim() };
+  }
+  function visionPrompt(){
+    return [
+      'Você interpreta prints de treinos de corrida (TrainingPeaks, Garmin, Strava ou qualquer outra fonte) e devolve a estrutura do treino.',
+      'Responda SOMENTE com um JSON válido, sem markdown e sem comentários, neste formato:',
+      '{"name":"Nome do treino","blocks":[{"label":"Aquecimento","kind":"aquecimento","durationSec":600,"speedKmh":10.8}]}',
+      'kind deve ser um destes: aquecimento, tiro, descanso, desaquecimento, bloco.',
+      'Regras obrigatórias:',
+      '1) Quando o print mostrar uma FAIXA de pace ou de velocidade, use sempre o extremo MAIS RÁPIDO da faixa (menor pace / maior velocidade).',
+      '2) Todas as velocidades vão no campo "speedKmh", em km/h. Se o print trouxer pace (min/km), converta: km/h = 60 / paceEmMinutos. Exemplos: pace 5:00/km = 12,0 km/h; pace 4:30/km = 13,3 km/h.',
+      '3) "durationSec" é a duração do bloco em segundos. Se o bloco tiver distância e pace/velocidade, calcule a duração (tempo = distância / velocidade).',
+      '4) Expanda as repetições: cada repetição vira blocos próprios, na ordem (ex.: 5x(5min Z3 / 1min Z4 / 2min Z2) gera 15 blocos, com o label indicando a repetição, tipo "Z3 5 min (1/5)").',
+      '5) Recuperação/descanso entre estímulos vira bloco kind "descanso". Segmentos contínuos em ritmos diferentes (fartlek) viram blocos "tiro" separados.',
+      '6) Aquecimento vira "aquecimento"; volta à calma/desaquecimento vira "desaquecimento"; os demais estímulos, "tiro".',
+      '7) "name": use o título do treino no print; se não houver, descreva em poucas palavras.',
+      'Se algo estiver ilegível, estime pelo contexto em vez de omitir o bloco.'
+    ].join('\n');
+  }
+  async function postJson(url,headers,body){
+    let res;
+    try{ res=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)}); }
+    catch(e){ throw new Error('Falha de rede ao chamar a API. Confira a conexão e tente de novo.'); }
+    let data=null; try{ data=await res.json(); }catch(e){}
+    if(!res.ok){
+      const msg=(data&&data.error&&(typeof data.error==='string'?data.error:data.error.message))||('HTTP '+res.status);
+      throw new Error('A API recusou a chamada: '+msg);
+    }
+    return data;
+  }
+  async function callVision(cfg,img,prompt){
+    let text='';
+    if(cfg.provider==='anthropic'){
+      const data=await postJson('https://api.anthropic.com/v1/messages',
+        {'Content-Type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        {model:cfg.model,max_tokens:4000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:img.mediaType,data:img.base64}},{type:'text',text:prompt}]}]});
+      text=(data.content||[]).filter(p=>p.type==='text').map(p=>p.text).join('');
+    } else if(cfg.provider==='gemini'){
+      const data=await postJson('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(cfg.model)+':generateContent',
+        {'Content-Type':'application/json','x-goog-api-key':cfg.key},
+        {contents:[{parts:[{text:prompt},{inlineData:{mimeType:img.mediaType,data:img.base64}}]}],generationConfig:{responseMimeType:'application/json'}});
+      const parts=(data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)||[];
+      text=parts.map(p=>p.text||'').join('');
+    } else {
+      const data=await postJson('https://api.openai.com/v1/chat/completions',
+        {'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+        {model:cfg.model,max_tokens:4000,response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:'+img.mediaType+';base64,'+img.base64,detail:'high'}}]}]});
+      text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    }
+    if(!text) throw new Error('A API não devolveu texto. Tente de novo.');
+    return text;
+  }
+  async function callServerInterpret(url,img){
+    let res;
+    try{ res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:img.base64,mimeType:img.mediaType,mediaType:img.mediaType})}); }
+    catch(e){ throw new Error('Falha de rede ao chamar o servidor de interpretação. Confira a URL e tente de novo.'); }
+    let raw=''; try{ raw=await res.text(); }catch(e){}
+    let data=null; try{ data=raw?JSON.parse(raw):null; }catch(e){}
+    if(!res.ok){
+      const msg=(data&&data.error&&(typeof data.error==='string'?data.error:data.error.message))||('HTTP '+res.status);
+      throw new Error('O servidor de interpretação recusou a chamada: '+msg);
+    }
+    if(!data){
+      if(!raw) throw new Error('O servidor não devolveu o treino. Tente de novo.');
+      return extractJson(raw);
+    }
+    if(typeof data==='string') return extractJson(data);
+    if(data.text&&typeof data.text==='string'&&!data.blocks&&!data.blocos) return extractJson(data.text);
+    if(data.content&&typeof data.content==='string'&&!data.blocks&&!data.blocos) return extractJson(data.content);
+    if(data.result&&typeof data.result==='object') return data.result;
+    if(data.workout&&typeof data.workout==='object') return data.workout;
+    if(data.data&&typeof data.data==='object'&&(data.data.blocks||data.data.blocos)) return data.data;
+    return data;
+  }
+  function extractJson(text){
+    const m=String(text||'').match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('A resposta não veio em JSON. Tente interpretar de novo.');
+    try{ return JSON.parse(m[0]); }catch(e){ throw new Error('Não consegui ler a resposta da IA. Tente de novo.'); }
+  }
+  function parsePaceValue(v){
+    if(typeof v==='number'&&v>0) return v;
+    const s=String(v==null?'':v).trim(); if(!s) return null;
+    const m=s.match(/^(\d{1,2}):([0-5]?\d)$/); if(m) return Number(m[1])+Number(m[2])/60;
+    const n=parseFloat(s.replace(',','.')); return Number.isFinite(n)&&n>0?n:null;
+  }
+  const aiKindMap={aquecimento:'aquecimento',warmup:'aquecimento','warm up':'aquecimento','warm-up':'aquecimento',tiro:'tiro',intervalo:'tiro',interval:'tiro',principal:'tiro',descanso:'descanso',rest:'descanso',recovery:'descanso',recuperacao:'descanso','recuperação':'descanso',pausa:'descanso',desaquecimento:'desaquecimento',cooldown:'desaquecimento','cool down':'desaquecimento','cool-down':'desaquecimento',bloco:'bloco'};
+  function normalizeInterpreted(data){
+    const blocks=data&&(data.blocks||data.blocos);
+    if(!Array.isArray(blocks)||!blocks.length) throw new Error('A interpretação não trouxe blocos. Confira o print e tente de novo.');
+    const clean=blocks.map((b,i)=>{
+      const tipo=aiKindMap[String(b.kind??b.tipo??'bloco').trim().toLowerCase()]||'bloco';
+      const rotulo=String(b.label??b.rotulo??'').trim()||((kindNames[tipo]||'Bloco')+' '+(i+1));
+      const duracao=Number(b.durationSec??b.duracao??b.duration);
+      let velocidade=null;
+      const kmh=Number(b.speedKmh??b.speed_kmh), mph=Number(b.speedMph??b.speed_mph);
+      if(Number.isFinite(kmh)&&kmh>=0) velocidade=kmh/1.609344;
+      else if(Number.isFinite(mph)&&mph>=0) velocidade=mph;
+      else{
+        const p=parsePaceValue(b.paceMinKm??b.paceMinPerKm??b.pace);
+        if(p) velocidade=(60/p)/1.609344;
+        else{ const v=Number(b.velocidade??b.speed); if(Number.isFinite(v)&&v>=0) velocidade=v/1.609344; }
+      }
+      if(!Number.isFinite(duracao)||duracao<=0) throw new Error(`Não identifiquei a duração do bloco ${i+1} ("${rotulo}"). Tente outro print ou ajuste pelo JSON.`);
+      if(velocidade==null) throw new Error(`Não identifiquei a velocidade do bloco ${i+1} ("${rotulo}"). Tente outro print ou ajuste pelo JSON.`);
+      return {rotulo,tipo,duracao:Math.round(duracao),velocidade};
+    });
+    const nome=String((data&&(data.name||data.nome))||'Treino do print').trim()||'Treino do print';
+    return {nome,blocos:clean};
+  }
+  function renderPhotoState(){
+    const has=!!selectedImage;
+    $('photoPreviewWrap').hidden=!has;
+    $('photoEmpty').hidden=has;
+    if(has) $('photoPreview').src=selectedImage.dataUrl;
+    $('interpretBtn').disabled=!has||interpreting;
+    $('interpretBtn').textContent=interpreting?'Interpretando…':'Interpretar treino';
+    const cfg=aiConfig();
+    if(!interpreting){
+      if(!has) $('photoStatus').textContent=cfg.serverUrl?'Nenhuma imagem selecionada. Servidor de interpretação configurado — sem chave.':'Nenhuma imagem selecionada.';
+      else $('photoStatus').textContent=cfg.serverUrl?'Imagem pronta. Toque em Interpretar treino — via servidor, sem chave.':(cfg.key?'Imagem pronta. Toque em Interpretar treino.':'Imagem pronta — falta configurar sua chave de API ou o servidor de interpretação.');
+    }
+    $('configBtn').textContent=cfg.serverUrl?'Configurar interpretação (servidor ativo)':(cfg.key?'Configurar interpretação (chave de API)':'Configurar interpretação — colar chave de API');
+  }
+  function processImageFile(file){
+    if(!file) return;
+    $('photoError').textContent='';$('photoStatus').textContent='Processando imagem…';
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const max=1600,scale=Math.min(1,max/Math.max(img.width||1,img.height||1));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      const dataUrl=c.toDataURL('image/jpeg',0.85);
+      URL.revokeObjectURL(url);
+      selectedImage={mediaType:'image/jpeg',base64:dataUrl.split(',')[1],dataUrl};
+      renderPhotoState();
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); $('photoError').textContent='Não consegui ler essa imagem. Tente outra.'; renderPhotoState(); };
+    img.src=url;
+  }
+  $('pickGallery').addEventListener('click',()=>$('fileGallery').click());
+  $('pickCamera').addEventListener('click',()=>$('fileCamera').click());
+  $('fileGallery').addEventListener('change',e=>{ processImageFile(e.target.files&&e.target.files[0]); e.target.value=''; });
+  $('fileCamera').addEventListener('change',e=>{ processImageFile(e.target.files&&e.target.files[0]); e.target.value=''; });
+  $('removePhoto').addEventListener('click',()=>{ selectedImage=null;$('photoError').textContent='';renderPhotoState(); });
+  $('configBtn').addEventListener('click',()=>openConfig());
+  $('interpretBtn').addEventListener('click',async()=>{
+    if(!selectedImage||interpreting) return;
+    const cfg=aiConfig();
+    const useServer=!!cfg.serverUrl;
+    if(!useServer&&!cfg.key){ openConfig('Cole sua chave de API para interpretar o print — ou informe a URL do servidor de interpretação. Tudo fica salvo só neste aparelho.'); return; }
+    interpreting=true;$('photoError').textContent='';$('photoStatus').textContent=useServer?'Interpretando o print pelo servidor… pode levar alguns segundos.':'Interpretando o print… pode levar alguns segundos.';renderPhotoState();
+    try{
+      let result;
+      if(useServer){
+        const data=await callServerInterpret(cfg.serverUrl,selectedImage);
+        result=normalizeInterpreted(data);
+      } else {
+        const text=await callVision(cfg,selectedImage,visionPrompt());
+        result=normalizeInterpreted(extractJson(text));
+      }
+      workout={nome:result.nome,blocos:result.blocos};
+      $('setupWorkoutName').textContent=workout.nome;
+      meta();
+      selectedImage=null;interpreting=false;
+      closePhotoPanel();renderPhotoState();renderSetup();
+    }catch(e){
+      interpreting=false;renderPhotoState();
+      $('photoError').textContent=e.message||'Não consegui interpretar o print.';
+      $('photoStatus').textContent='';
+    }
+  });
+  // ===== Tela de configuração da chave de API =====
+  function updateKeyStatus(){
+    const saved=lsGet('esteira_ai_key');
+    if(saved){
+      $('keyStatus').textContent='Chave salva neste aparelho (termina em ••••'+saved.trim().slice(-4)+'). Deixe o campo vazio para manter a atual.';
+      $('clearKeyBtn').hidden=false;
+    } else {
+      $('keyStatus').textContent='Nenhuma chave salva ainda.';
+      $('clearKeyBtn').hidden=true;
+    }
+    const savedServer=lsGet('esteira_ai_server_url').trim();
+    const serverEl=$('serverStatus');
+    if(serverEl) serverEl.textContent=savedServer?'Servidor salvo neste aparelho: '+savedServer:'Nenhum servidor configurado — vale a chave pessoal.';
+    const p=$('aiProvider').value;
+    if(providerDefaults[p]) $('keyHint').textContent=providerDefaults[p].hint;
+  }
+  function openConfig(msg){
+    const c=aiConfig();
+    $('aiProvider').value=c.provider;
+    $('aiModel').value=lsGet('esteira_ai_model')||providerDefaults[c.provider].model;
+    $('aiKey').value='';$('aiKey').type='password';$('keyToggle').textContent='Mostrar';
+    if($('aiServerUrl')) $('aiServerUrl').value=c.serverUrl||'';
+    updateKeyStatus();
+    $('configMsg').textContent=msg||'';
+    state='config';show('configScreen');
+  }
+  $('aiProvider').addEventListener('change',()=>{
+    const p=$('aiProvider').value,cur=$('aiModel').value.trim();
+    const isDefault=Object.keys(providerDefaults).some(k=>providerDefaults[k].model===cur);
+    if(!cur||isDefault) $('aiModel').value=providerDefaults[p].model;
+    updateKeyStatus();
+  });
+  $('keyToggle').addEventListener('click',()=>{
+    const showing=$('aiKey').type==='text';
+    $('aiKey').type=showing?'password':'text';
+    $('keyToggle').textContent=showing?'Mostrar':'Ocultar';
+  });
+  $('saveConfigBtn').addEventListener('click',()=>{
+    const provider=$('aiProvider').value;
+    const model=$('aiModel').value.trim()||providerDefaults[provider].model;
+    const key=$('aiKey').value.trim();
+    const serverUrl=$('aiServerUrl')?$('aiServerUrl').value.trim():'';
+    if(serverUrl){
+      try{ const u=new URL(serverUrl); if(u.protocol!=='http:'&&u.protocol!=='https:') throw new Error('proto'); }
+      catch(e){ $('configMsg').textContent='Confira a URL do servidor de interpretação — ela precisa começar com http:// ou https://';return; }
+    }
+    let ok=lsSet('esteira_ai_provider',provider)&&lsSet('esteira_ai_model',model);
+    if(ok&&key) ok=lsSet('esteira_ai_key',key);
+    if(ok){
+      if(serverUrl) ok=lsSet('esteira_ai_server_url',serverUrl);
+      else { try{ localStorage.removeItem('esteira_ai_server_url'); }catch(e){} }
+    }
+    if(!ok){
+      $('configMsg').textContent='Não consegui salvar neste aparelho.';return;
+    }
+    if(!aiConfig().key&&!serverUrl){ $('configMsg').textContent='Cole sua chave de API ou informe a URL do servidor de interpretação para salvar.';updateKeyStatus();return; }
+    state='setup';show('setupScreen');renderPhotoState();
+  });
+  $('clearKeyBtn').addEventListener('click',()=>{
+    try{ localStorage.removeItem('esteira_ai_key'); }catch(e){}
+    $('aiKey').value='';updateKeyStatus();
+    $('configMsg').textContent='Chave apagada deste aparelho.';
+  });
+  $('configBack').addEventListener('click',()=>{ state='setup';show('setupScreen');renderPhotoState(); });
+
+  // Ao voltar para a tela: o tempo já está certo (timestamps) e o Wake Lock —
+  // liberado pelo navegador enquanto a aba estava fora de vista — é re-solicitado.
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&(state==='running'||state==='free')) requestWakeLock(); });
+  renderSetup();renderPhotoState();
+})();
+</script>
+</body>
+</html>
